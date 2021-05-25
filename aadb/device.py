@@ -3,8 +3,169 @@ from enum import Enum
 from typing import Dict, List
 
 
+class Log(object):
+
+    class LogLevel(Enum):
+        VERBOSE = (2, "verbose", 'V')
+        DEBUG = (3, "debug", 'D')
+        INFO = (4, "info", 'I')
+        WARN = (5, "warn", 'W')
+        ERROR = (6, "error", 'E')
+        ASSERT = (7, "assert", 'A')
+
+        def __init__(self, int_priority: int, string_value: str, priority_char: str):
+            self.priority_level = int_priority
+            self.string_value = string_value
+            self.priority_letter = priority_char
+
+
+class DdmPreferences(object):
+
+    DEFAULT_INITIAL_THREAD_UPDATE = False
+    DEFAULT_INITIAL_HEAP_UPDATE = False
+    DEFAULT_SELECTED_DEBUG_PORT = 8700
+    DEFAULT_DEBUG_PORT_BASE = 8600
+    DEFAULT_LOG_LEVEL = Log.LogLevel.ERROR
+    DEFAULT_TIMEOUT = 5000
+    DEFAULT_PROFILER_BUFFER_SIZE_MB = 8
+    DEFAULT_USE_ADBHOST = False
+    DEFAULT_ADBHOST_VALUE = "127.0.0.1"
+
+    sThreadUpdate = DEFAULT_INITIAL_THREAD_UPDATE
+    sInitialHeapUpdate = DEFAULT_INITIAL_HEAP_UPDATE
+    sSelectedDebugPort = DEFAULT_SELECTED_DEBUG_PORT
+    sDebugPortBase = DEFAULT_DEBUG_PORT_BASE
+    sLogLevel = DEFAULT_LOG_LEVEL
+    sTimeOut = DEFAULT_TIMEOUT
+    sProfilerBufferSizeMb = DEFAULT_PROFILER_BUFFER_SIZE_MB
+    sUseAdbHost = DEFAULT_USE_ADBHOST
+    sAdbHostValue = DEFAULT_ADBHOST_VALUE
+
+    @staticmethod
+    def get_initial_thread_update() -> bool:
+        return DdmPreferences.sThreadUpdate
+
+    @staticmethod
+    def set_initial_thread_update(state: bool):
+        DdmPreferences.sThreadUpdate = state
+
+    @staticmethod
+    def get_initial_heap_update() -> bool:
+        return DdmPreferences.sInitialHeapUpdate
+
+    @staticmethod
+    def set_initial_heap_update(state: bool):
+        DdmPreferences.sInitialHeapUpdate = state
+
+    @staticmethod
+    def get_selected_debug_port() -> int:
+        return DdmPreferences.sSelectedDebugPort
+
+    @staticmethod
+    def set_selected_debug_port(port: int):
+        DdmPreferences.sSelectedDebugPort = port
+
+        monitor_thread = MonitorThread.getInstance();
+        if monitor_thread is not None:
+            monitor_thread.set_debug_selected_port(port)
+
+    @staticmethod
+    def get_debug_port_base() -> int:
+        return DdmPreferences.sDebugPortBase
+
+    @staticmethod
+    def set_debug_port_base(port: int):
+        DdmPreferences.sDebugPortBase = port
+
+    @staticmethod
+    def get_log_level() -> Log.LogLevel:
+        return DdmPreferences.sLogLevel
+
+    @staticmethod
+    def set_log_level(value: str):
+        log_Level = Log.LogLevel.get_by_string(value)
+        Log.set_level(log_Level)
+
+    @staticmethod
+    def get_timeout() -> int:
+        return DdmPreferences.sTimeOut
+
+    @staticmethod
+    def set_timeout(timeout: int):
+        DdmPreferences.sTimeOut = timeout
+
+    @staticmethod
+    def get_profiler_buffer_size_mb() -> int:
+        return DdmPreferences.sProfilerBufferSizeMb
+
+    @staticmethod
+    def set_profiler_buffer_size_mb(buffer_size_mb: int):
+        DdmPreferences.sProfilerBufferSizeMb = buffer_size_mb
+
+    @staticmethod
+    def get_use_adb_host() -> bool:
+        return DdmPreferences.sUseAdbHost
+
+    @staticmethod
+    def set_use_adb_host(use_adb_host: bool):
+        DdmPreferences.sUseAdbHost = use_adb_host
+
+    @staticmethod
+    def get_adb_host_value() -> str:
+        return DdmPreferences.sAdbHostValue
+
+    @staticmethod
+    def set_adb_host_value(adb_host_value: str):
+        DdmPreferences.sAdbHostValue = adb_host_value
+
+
 class Client(object):
-    pass
+    SERVER_PROTOCOL_VERSION = 1
+
+    CHANGE_NAME = 0x0001
+    CHANGE_DEBUGGER_STATUS = 0x0002
+    CHANGE_PORT = 0x0004
+    CHANGE_THREAD_MODE = 0x0008
+    CHANGE_THREAD_DATA = 0x0010
+    CHANGE_HEAP_MODE = 0x0020
+    CHANGE_HEAP_DATA = 0x0040
+    CHANGE_NATIVE_HEAP_DATA = 0x0080
+    CHANGE_THREAD_STACKTRACE = 0x0100
+    CHANGE_HEAP_ALLOCATIONS = 0x0200
+    CHANGE_HEAP_ALLOCATION_STATUS = 0x0400
+    CHANGE_METHOD_PROFILING_STATUS = 0x0800
+
+    CHANGE_INFO = CHANGE_NAME | CHANGE_DEBUGGER_STATUS | CHANGE_PORT
+
+    INITIAL_BUF_SIZE = 2 * 1024
+    MAX_BUF_SIZE = 200 * 1024 * 1024
+
+    WRITE_BUF_SIZE = 256
+
+    ST_INIT = 1
+    ST_NOT_JDWP = 2
+    ST_AWAIT_SHAKE = 10
+    ST_NEED_DDM_PKT = 11
+    ST_NOT_DDM = 12
+    ST_READY = 13
+    ST_ERROR = 20
+    ST_DISCONNECTED = 21
+
+    def __init__(self, device: 'Device', channel, pid: int):
+        self.device = device
+        self.channel = channel
+
+        self.read_buffer = None
+        self.write_buffer = None
+
+        self.out_standing_reqs = None
+        self.conn_state = self.ST_INIT
+
+        self.client_data = ClientData(pid)
+
+        self.thread_update_enabled = DdmPreferences.get_initial_thread_update()
+        self.heap_update_enabled = DdmPreferences.get_initial_heap_update()
+
 
 
 class SyncService(object):
