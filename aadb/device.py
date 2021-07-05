@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from enum import Enum
 from typing import Dict, List
+from threading import Thread
 
 
 class Log(object):
-
     class LogLevel(Enum):
         VERBOSE = (2, "verbose", 'V')
         DEBUG = (3, "debug", 'D')
@@ -19,8 +19,114 @@ class Log(object):
             self.priority_letter = priority_char
 
 
-class DdmPreferences(object):
+class IStackTraceInfo(object):
 
+    @abstractmethod
+    def get_stack_trace(self) -> List[object]:
+        pass
+
+
+class AllocationInfo()
+
+
+class AndroidDebugBridge(object):
+    ADB_VERSION_MICRO_MIN = 20
+    ADB_VERSION_MICRO_MAX = -1
+
+    sAdbVersion = "^.*(\\d+)\\.(\\d+)\\.(\\d+)$"
+
+    ADB = "adb"
+    DDMS = "ddms"
+    SERVER_PORT_ENV_VAR = "ANDROID_ADB_SERVER_PORT"
+
+    ADB_HOST = "127.0.0.1"
+    ADB_PORT = 5037
+
+    class IDebugBridgeChangeListener(object):
+
+        @abstractmethod
+        def bridge_changed(self, bridge: 'AndroidDebugBridge'):
+            pass
+
+    class IDeviceChangeListener(object):
+
+        @abstractmethod
+        def device_connected(self, device: 'IDevice'):
+            pass
+
+        @abstractmethod
+        def device_disconnected(self, device: 'IDevice'):
+            pass
+
+        @abstractmethod
+        def device_changed(self, device: 'IDevice', change_mask: int):
+            pass
+
+    class IClientChangeListener(object):
+
+        @abstractmethod
+        def client_changed(self, client: 'Client', change_mask: int):
+            pass
+
+    def __init__(self, os_location: str = None):
+        self.adb_os_location = os_location
+
+        self.version_check: bool = False
+        self.started: bool = False
+        self.device_monitor: DeviceMonitor = None
+        self.bridge_listeners = list()
+        self.device_listeners = list()
+        self.client_listeners = list()
+
+        self.__check_adb_version()
+
+    def __check_adb_version(self):
+        self.version_check = False
+
+        if self.adb_os_location is None:
+            return
+
+        command = []
+        command[0] = self.adb_os_location
+        command[1] = 'version'
+        print(self.DDMS, 'checking {} version'.format(self.adb_os_location))
+
+
+
+
+class MonitorThread(Thread):
+    CLIENT_CONNECTED = 1
+    CLIENT_READY = 2
+    CLIENT_DISCONNECTED = 3
+    mQuit = False
+
+    sInstance = None
+
+    def __init__(self):
+        super().__init__(name='Monitor')
+        self.client_list = list()
+        self.handler_map = dict()
+        self.new_debug_selected_port = DdmPreferences.get_selected_debug_port()
+
+        self.selector = None
+        self.debug_selected_port = -1
+        self.selected_client: Client = None
+
+    def create_instance(self) -> 'MonitorThread':
+        self.sInstance = MonitorThread()
+        return self.sInstance
+
+    def get_instance(self) -> 'MonitorThread':
+        return self.sInstance
+
+    def set_debug_selected_port(self, port: int):
+        if self.sInstance is None:
+            return
+
+        if
+
+
+class DdmPreferences(object):
     DEFAULT_INITIAL_THREAD_UPDATE = False
     DEFAULT_INITIAL_HEAP_UPDATE = False
     DEFAULT_SELECTED_DEBUG_PORT = 8700
@@ -119,6 +225,47 @@ class DdmPreferences(object):
         DdmPreferences.sAdbHostValue = adb_host_value
 
 
+class HeapSegment(object):
+    pass
+
+
+class ClientData(object):
+    PRE_INITIALIZED = '<pre-initialized>'
+
+    class DebuggerStatus(Enum):
+        DEFAULT = 0
+        WAITING = 1
+        ATTACHED = 2
+        ERROR = 3
+
+    class AllocationTrackingStatus(Enum):
+        UNKNOWN = 0
+        OFF = 1
+        ON = 2
+
+    class MethodProfilingStatus(Enum):
+        UNKNOWN = 0
+        OFF = 1
+        ON = 2
+
+    HEAP_MAX_SIZE_BYTES = "maxSizeInBytes"
+    HEAP_SIZE_BYTES = "sizeInBytes"
+    HEAP_BYTES_ALLOCATED = "bytesAllocated"
+    HEAP_OBJECTS_ALLOCATED = "objectsAllocated"
+
+    FEATURE_PROFILING = "method-trace-profiling"
+    FEATURE_PROFILING_STREAMING = "method-trace-profiling-streaming"
+    FEATURE_OPENGL_TRACING = "opengl-tracing"
+    FEATURE_VIEW_HIERARCHY = "view-hierarchy"
+    FEATURE_HPROF = "hprof-heap-dump"
+    FEATURE_HPROF_STREAMING = "hprof-heap-dump-streaming"
+
+    class HeapData(object):
+
+        def clear_heap_data(self):
+            pass
+
+
 class Client(object):
     SERVER_PROTOCOL_VERSION = 1
 
@@ -167,7 +314,6 @@ class Client(object):
         self.heap_update_enabled = DdmPreferences.get_initial_heap_update()
 
 
-
 class SyncService(object):
     pass
 
@@ -207,6 +353,49 @@ class IShellEnabledDevice(object):
 
     @abstractmethod
     def execute_shell_command(self, command: str, receiver: IShellOutputReceiver):
+        pass
+
+
+class MultiLineReceiver(IShellOutputReceiver):
+
+    def __init__(self):
+        self.mTrimLines = True
+        self.mUnfinishedLine = None
+        self.mArray = list()
+
+    def set_trim_line(self, trim: bool):
+        self.mTrimLines = trim
+
+    def add_output(self, data: bytes, offset: int, length: int):
+        if not self.is_cancelled():
+            s = None
+        try:
+            s = None
+        except Exception:
+            s = None
+
+        if self.mUnfinishedLine is not None:
+            s = self.mUnfinishedLine + s
+            self.mUnfinishedLine = None
+
+        self.mArray.clear()
+        start = 0
+
+    def flush(self):
+        if self.mUnfinishedLine is not None:
+            self.process_new_lines(self.mUnfinishedLine)
+
+        self.done()
+
+    def done(self):
+        pass
+
+    @abstractmethod
+    def is_cancelled(self) -> bool:
+        pass
+
+    @abstractmethod
+    def process_new_lines(self, lines: List[str]):
         pass
 
 
@@ -391,6 +580,141 @@ class IDevice(IShellEnabledDevice):
 
     @abstractmethod
     def get_battery_level(self, freshness_ms: float) -> int:
+        pass
+
+
+class Device(IDevice):
+    INSTALL_TIMEOUT = 2 * 60 * 1000
+    BATTERY_TIMEOUT = 2 * 1000
+    GETPROP_TIMEOUT = 2 * 1000
+
+    RE_EMULATOR_SN = "emulator-(\\d+)"
+
+    LOG_TAG = "Device"
+    SEPARATOR = '-'
+    UNKNOWN_PACKAGE = ""
+
+    def __init__(self):
+        self.mSerialNumber = None
+        self.mAvdName = None
+        self.mState = None
+
+        self.mProperties = dict()
+        self.mMountPoints = dict()
+
+        self.mClients = list()
+        self.mClientInfo = dict()
+        self.mMonitor = None
+
+        self.mSocketChannel = None
+        self.mArePropertiesSet = False
+        self.mLastBatteryLevel = None
+        self.mLastBatteryCheckTime = 0
+        self.mName = None
+
+    def get_serial_number(self) -> str:
+        pass
+
+    def get_avd_name(self) -> str:
+        pass
+
+    def get_state(self) -> IDevice.DeviceState:
+        pass
+
+    def get_properties(self) -> Dict[str: str]:
+        pass
+
+    def get_property_count(self) -> int:
+        pass
+
+    def are_properties_set(self) -> bool:
+        pass
+
+    def get_property_sync(self, name: str) -> str:
+        pass
+
+    def get_property_cache_or_sync(self, name: str) -> str:
+        pass
+
+    def get_mount_point(self, name: str) -> str:
+        pass
+
+    def is_online(self) -> bool:
+        pass
+
+    def is_emulator(self) -> bool:
+        pass
+
+    def is_offline(self) -> bool:
+        pass
+
+    def is_bootloader(self) -> bool:
+        pass
+
+    def has_clients(self) -> bool:
+        pass
+
+    def get_clients(self) -> List[Client]:
+        pass
+
+    def get_client(self, application_name: str) -> Client:
+        pass
+
+    def get_sync_service(self) -> SyncService:
+        pass
+
+    def get_file_listing_service(self) -> FileListingService:
+        pass
+
+    def get_screen_shot(self) -> RawImage:
+        pass
+
+    def execute_shell_command(self, command: str, receiver: IShellOutputReceiver):
+        pass
+
+    def run_event_log_service(self, receiver: LogReceiver):
+        pass
+
+    def run_log_service(self, log_name: str, receiver: LogReceiver):
+        pass
+
+    def create_forward(self, local_port: int, remote_port: int, namespace: DeviceUnixSocketNamespace = None):
+        pass
+
+    def remove_forward(self, local_port: int, remote_port: int, namespace: DeviceUnixSocketNamespace = None):
+        pass
+
+    def get_client_name(self, pid: int):
+        pass
+
+    def push_file(self, local: str, remote: str):
+        pass
+
+    def pull_file(self, remote: str, local: str):
+        pass
+
+    def install_package(self, package_file_path: str, reinstall: bool, *extra_args):
+        pass
+
+    def sync_package_to_device(self, local_file_path: str):
+        pass
+
+    def install_remote_package(self, remote_file_path, reinstall: bool, *extra_args):
+        pass
+
+    def remove_remote_package(self, remote_file_path: str):
+        pass
+
+    def uninstall_package(self, package_name: str) -> str:
+        pass
+
+    def reboot(self, into: str):
+        pass
+
+    def get_battery_level(self, freshness_ms: float) -> int:
+        pass
+
+    def get_name(self) -> str:
         pass
 
 
