@@ -1,4 +1,3 @@
-import asyncio
 import os
 import re
 import struct
@@ -6,9 +5,7 @@ from typing import List, Dict
 
 import aiofiles
 
-from aadb import events
 from aadb.transport import Client, Signal, Stats
-
 
 try:
     from shlex import quote as cmd_quote
@@ -137,7 +134,11 @@ class Device(object):
         async def run_cmd(pipeline_func):
             pass
 
-        await run_cmd(pipeline_func=lambda x: x if pipeline is None else lambda line: pipeline(line))
+        def parsing_result(line):
+            if pipeline is not None:
+                pipeline(line)
+
+        await run_cmd(pipeline_func=parsing_result)
 
     async def push(self, src: str, dest: str, progress_func=None):
         if not os.path.exists(src):
@@ -280,30 +281,3 @@ class Device(object):
         if result and result.group(1) == "Success":
             return True
         return False
-
-
-
-async def main():
-    async with Client() as client:
-        await client.call('host:devices')
-        result = await client.receive()
-        for line in result.split('\n'):
-            if not line:
-                break
-
-            tokens = line.split()
-            print(tokens)
-    device = Device('192.168.56.106:5555')
-    print(await device.list_package())
-    print(await device.shell('getprop', pipeline=lambda x: print(x)))
-    task = asyncio.create_task(device.logcat(pipeline=lambda x: print(x)))
-    await asyncio.sleep(3)
-    task.cancel()
-    print('end')
-
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    events.set_event_loop(loop)
-    loop.run_until_complete(main())
-    loop.run_forever()

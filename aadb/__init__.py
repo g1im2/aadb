@@ -1,4 +1,7 @@
 from enum import Enum
+import asyncio
+from aadb import events
+from aadb.adb import AndroidDebugBridge
 
 
 class KeyCode(Enum):
@@ -226,3 +229,20 @@ class KeyCode(Enum):
     KEYCODE_BRIGHTNESS_UP = 221
     KEYCODE_MEDIA_AUDIO_TRACK = 222
 
+
+inner_host = ''
+inner_port = ''
+
+
+def create_bridge(host: str = '127.0.0.1', port: int = 5037):
+    global inner_port
+    global inner_host
+    inner_host = host
+    inner_port = port
+    return AndroidDebugBridge()
+
+
+def start(func):
+    events.set_event_loop(asyncio.get_event_loop())
+    events.get_event_loop().run_until_complete(func)
+    events.get_event_loop().run_forever()

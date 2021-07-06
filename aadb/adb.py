@@ -1,22 +1,18 @@
-import asyncio
 from enum import Enum
 from typing import List
 
 from aadb.device import Device
 from aadb.device import Transport
-from aadb import events
 
 tp = Transport()
 
 
 class AndroidDebugBridge(object):
+
     class DeviceStatus(Enum):
         OFFLINE = "offline"
         DEVICE = "device"
         BOOTLOADER = "bootloader"
-
-    def __init__(self):
-        pass
 
     async def devices(self, state: DeviceStatus = None) -> List[Device]:
         device_list = []
@@ -128,16 +124,3 @@ class AndroidDebugBridge(object):
             print(result)
 
         await disconnect_remote(parsing_result=parsing_result_f)
-
-
-async def main():
-    a = AndroidDebugBridge()
-    for d in await a.devices():
-        asyncio.create_task(d.logcat(lambda x: x))
-        asyncio.create_task(d.install('./ddd.apk'))
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    events.set_event_loop(loop)
-    loop.run_until_complete(main())
-    loop.run_forever()

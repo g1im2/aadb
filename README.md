@@ -4,14 +4,27 @@
 
 实现这个工具包的目的在于，通过执行想对应的 adb 指令，可以使用 python 来对其日志进行想对应的分析，仅此而已。当然，也可以有更多的应用场景，但是，目前仅仅为了把命令执行后的日志处理更加优雅，当然，需要同时执行多个指令的情况下，这种场景是始终存在的。
 
-## 开始
+## 安装
+```shell
+pip install aadb
+```
 
-在 Android SDK 中，有配套的 ddmlib，它是一个很稳定，而且很好用的 Java 版的 adb 工具包， 为此， 如果 python 也有一个工具包呢？抱着这样的想法，不过由于太懒，我决定把 java 端的代码从头到尾抄一边，然后再分离其中有趣的部分，再根据 python 原有的特性进行美化。当然，最后还要把 python 中最新的 asyncio 给用上。
+## 使用
+```python
+import aadb
+import asyncio
 
-## 可能存在的分支
 
- - clone: 这是一个代码完全从 ddmlib 中抄来的分支
- - evo: 将抄来的代码优化成为 python 风格
- - aio: 将 asyncio 融入到代码中，切换不同 api 的调用风格
+async def main():
+    adb = aadb.create_bridge()
+    device = (await adb.devices())[0]
+    asyncio.create_task(device.logcat(pipeline=lambda x: print(x)))
+    await asyncio.sleep(3)
+    print(await device.get_properties())
+    await asyncio.sleep(3)
+    print(await device.list_package())
+    await device.shell('dumpsys meminfo', pipeline=lambda x: print(x))
 
-每个分支都能使用 setup 来构建对应的调用架包。
+if __name__ == '__main__':
+    aadb.start(main())
+```

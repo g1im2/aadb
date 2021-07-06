@@ -2,6 +2,7 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from asyncio import StreamReaderProtocol
 
+import aadb
 from aadb import events
 
 
@@ -47,9 +48,9 @@ class ClientProtocol(StreamReaderProtocol):
 
 class Client(object):
 
-    def __init__(self, host: str = '127.0.0.1', port: int = 5037):
-        self.host = host
-        self.port = port
+    def __init__(self):
+        self.host = aadb.inner_host
+        self.port = aadb.inner_port
         self.reader: StreamReader = None
         self.writer: StreamWriter = None
         self.transport = None
@@ -119,17 +120,3 @@ class Client(object):
 
     async def write(self, data):
         self.writer.write(data)
-
-
-
-async def main():
-    async with Client() as client:
-        await client.call('host:devices')
-        print(await client.receive())
-
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    events.set_event_loop(loop)
-    loop.run_until_complete(main())
-    loop.run_forever()
