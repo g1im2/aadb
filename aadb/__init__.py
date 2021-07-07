@@ -1,7 +1,7 @@
-from enum import Enum
 import asyncio
 from aadb import events
 from aadb.adb import AndroidDebugBridge
+from enum import Enum
 
 
 class KeyCode(Enum):
@@ -246,3 +246,8 @@ def start(func):
     events.set_event_loop(asyncio.get_event_loop())
     events.get_event_loop().run_until_complete(func)
     events.get_event_loop().run_forever()
+
+
+def start_quickly(func):
+    events.set_event_loop(asyncio.get_event_loop())
+    events.get_event_loop().run_until_complete(func)
